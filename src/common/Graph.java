@@ -12,6 +12,8 @@ public class Graph {
 	private double graphZScore;
 	private boolean isChanged = true;
 
+	private Vertex lastAddedVertex;
+
 	public double getGraphZScore() {
 
 		if (isChanged) {
@@ -21,10 +23,32 @@ public class Graph {
 			}
 
 			graphZScore /= Math.sqrt(vertexList.size());
+			isChanged = false;
 		}
 
 		return graphZScore;
+	}
 
+	public boolean contains(Vertex v) {
+		return vertexList.contains(v);
+	}
+
+	public Graph(Vertex startingVertex) {
+		lastAddedVertex = startingVertex;
+	}
+
+	public final Vertex getLastAddedVertex() {
+		return lastAddedVertex;
+	}
+
+	public void addVertex(Vertex v) {
+
+		if (this.contains(v)) {
+			throw new AssertionError("This vertex is already added!");
+		}
+		vertexList.add(v);
+		lastAddedVertex = v;
+		isChanged = true;
 	}
 
 }

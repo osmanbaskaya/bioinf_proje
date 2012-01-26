@@ -3,8 +3,9 @@ package common;
 /**
  * @author Osman Baskaya
  */
+
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.Map;
 
 public class Vertex implements Comparable<Vertex> {
@@ -16,19 +17,19 @@ public class Vertex implements Comparable<Vertex> {
 	private double[] zScores;
 	private double[] neighborsZScore = null;
 	private boolean isChanged = true;
-	private static final double[] weights = { 1.0, 1.0 };
-	private final double vertexZScore; 
+
+	// weights[0] = current node's weight, weights[1] = node's neighbors'
+	// weights.
+	private static final double[] weights = { 0.5, 0.5 };
+
+	private final double vertexZScore;
 
 	public Vertex(String code, double[] zScores) {
 		this.code = code;
 		this.zScores = zScores;
-		vertexZScore = calculateMeanWithWeights(zScores);
+		vertexZScore = calculateEuclideanSquare(zScores);
 
 		// Arrays.fill(neighborsZScore, Double.NaN);
-	}
-	
-	public double getVertexZScore(){
-		return vertexZScore;
 	}
 
 	public void addNeighbors(String neighborsCode) {
@@ -38,17 +39,16 @@ public class Vertex implements Comparable<Vertex> {
 		}
 	}
 
+	// public double[] getMeanTotalZScore() {
+	// double[] meanZScore = getTotalZScore();
+	// int numberOfNeighbors = neighbors.size();
+	// for (byte i = 0; i < numberOfZScores; i++) {
+	// meanZScore[i] = meanZScore[i] / (numberOfNeighbors + 1);
+	// }
+	// return meanZScore.clone();
+	// }
 
-	public double[] getMeanTotalZScore() {
-		double[] meanZScore = getTotalZScore();
-		int numberOfNeighbors = neighbors.size();
-		for (byte i = 0; i < numberOfZScores; i++) {
-			meanZScore[i] = meanZScore[i] / (numberOfNeighbors + 1);
-		}
-		return meanZScore.clone();
-	}
-
-	public double[] getTotalZScore() {
+	public double[] getTotalZScore() throws IOException {
 		double[] meanZScore = getNeighborsZScore();
 		for (byte i = 0; i < numberOfZScores; i++) {
 			meanZScore[i] += zScores[i];
@@ -56,7 +56,7 @@ public class Vertex implements Comparable<Vertex> {
 		return meanZScore;
 	}
 
-	public double[] getMeanNeighborsZScore() {
+	public double[] getMeanNeighborsZScore() throws IOException {
 		double[] meanZScore = getNeighborsZScore();
 		int numberOfNeighbors = neighbors.size();
 		for (byte i = 0; i < numberOfZScores; i++) {
@@ -65,8 +65,12 @@ public class Vertex implements Comparable<Vertex> {
 
 		return meanZScore;
 	}
+	
+	public String getCode(){
+		return code;
+	}
 
-	public double[] getNeighborsZScore() {
+	public double[] getNeighborsZScore() throws IOException {
 		Map<String, Vertex> vertices = Data.getGraphData().getVertices();
 		if (neighborsZScore == null || isChanged) {
 			neighborsZScore = new double[numberOfZScores];
@@ -80,13 +84,24 @@ public class Vertex implements Comparable<Vertex> {
 		}
 		this.isChanged = false;
 		return neighborsZScore.clone();
-
+	}
+	
+	
+	public ArrayList<String> getNeighbors(){
+		return neighbors;
 	}
 
 	@Override
 	public int compareTo(final Vertex o) {
-		double self = calculateMeanWithWeights(this.getMeanTotalZScore());
-		double other = calculateMeanWithWeights(o.getMeanTotalZScore());
+		double self = 0;
+		double other = 0;
+
+		try {
+			self = this.calculateMeanWithWeights();
+			other = o.calculateMeanWithWeights();
+		} catch (Exception e) {
+			System.exit(-1);
+		}
 		if (self > other) {
 			return 1;
 		} else if (self < other) {
@@ -96,17 +111,33 @@ public class Vertex implements Comparable<Vertex> {
 
 	}
 
-	private static double calculateMeanWithWeights(final double[] a1) {
-		double numerator = 0.0;
-		double denominator = 0.0;
-		for (int i = 0; i < a1.length; i++) {
-			numerator += a1[i] * weights[i];
-			denominator += weights[i];
+	private double calculateMeanWithWeights() throws IOException {
+
+		double[] acc = zScores.clone();
+		double[] scores = this.getMeanNeighborsZScore();
+		for (int i = 0; i < numberOfZScores; i++) {
+			acc[i] = acc[i] * weights[0] + scores[i] * weights[1];
 		}
-		return numerator / denominator;
+
+		return calculateEuclideanSquare(acc);
+	}
+
+	public static double calculateEuclideanSquare(final double[] arr) {
+
+		double numerator = 0.0;
+
+		for (int i = 0; i < numberOfZScores; i++) {
+			numerator += Math.pow(arr[i], 2);
+		}
+
+		return numerator;
 	}
 
 	public static byte getNumberOfZScores() {
 		return numberOfZScores;
+	}
+
+	public double getVertexZScore() {
+		return vertexZScore;
 	}
 }
